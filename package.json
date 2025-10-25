@@ -1,0 +1,19 @@
+{
+  "name": "notsphere",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "scripts/dev.sh",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:migrate": "scripts/migrate.sh",
+    "db:seed": "pnpm --filter api ts-node ../scripts/seed.ts"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "pnpm": "^8.15.0"
+  }
+}

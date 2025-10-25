@@ -1,0 +1,9 @@
+{
+  "name": "@notsphere/config",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./eslint.base.cjs": "./eslint.base.cjs"
+  }
+}
