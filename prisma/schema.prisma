@@ -73,6 +73,7 @@ model Attachment {
   type      AttachmentType
   filename  String
   url       String
+  storageKey String
   size      Int
   createdAt DateTime @default(now())
   note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)

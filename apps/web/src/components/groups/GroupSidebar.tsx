@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useGroupsStore } from '../../store/groups';
 import { useAuthStore } from '../../store/auth';
-import { useNotesStore } from '../../store/notes';
 import { toast } from 'sonner';
 
 interface GroupSidebarProps {
   activeGroupId?: string;
+  onSelectGroup: (groupId: string) => Promise<void> | void;
 }
 
-const GroupSidebar = ({ activeGroupId }: GroupSidebarProps) => {
+const GroupSidebar = ({ activeGroupId, onSelectGroup }: GroupSidebarProps) => {
   const { groups, createGroup } = useGroupsStore();
   const { logout, user } = useAuthStore();
-  const { fetchNotes, setActiveNote } = useNotesStore();
   const [showForm, setShowForm] = useState(false);
   const [groupName, setGroupName] = useState('');
 
@@ -22,11 +21,6 @@ const GroupSidebar = ({ activeGroupId }: GroupSidebarProps) => {
   }, [groups]);
 
   const sortedGroups = useMemo(() => [...groups].sort((a, b) => a.position - b.position), [groups]);
-
-  const onSelectGroup = async (groupId: string) => {
-    await fetchNotes(groupId);
-    setActiveNote(null);
-  };
 
   const onCreateGroup = async (event: React.FormEvent) => {
     event.preventDefault();

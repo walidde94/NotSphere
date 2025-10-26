@@ -26,6 +26,44 @@ export const createUser = async (email: string, password: string, name: string) 
     }
   });
 
+  await prisma.$transaction(async (tx) => {
+    const group = await tx.group.create({
+      data: {
+        userId: user.id,
+        name: 'Getting Started',
+        color: '#7F5AF0',
+        position: 1
+      }
+    });
+
+    await tx.note.create({
+      data: {
+        groupId: group.id,
+        title: 'Welcome to NotSphere',
+        plainPreview: 'Meet your new collaborative notebook.',
+        content: {
+          type: 'doc',
+          content: [
+            {
+              type: 'heading',
+              attrs: { level: 2 },
+              content: [{ type: 'text', text: 'Welcome to NotSphere!' }]
+            },
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Start capturing ideas, collaborate in real-time and work offline. Use the sidebar to create more groups.'
+                }
+              ]
+            }
+          ]
+        }
+      }
+    });
+  });
+
   return user;
 };
 

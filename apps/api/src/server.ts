@@ -12,6 +12,7 @@ import logger from './config/logger';
 import { loadEnv } from './config/env';
 import apiRoutes from './routes';
 import prisma from './lib/prisma';
+import { ensureBucket } from './lib/storage';
 import { attachUser } from './middleware/attachUser';
 
 const env = loadEnv();
@@ -77,10 +78,23 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(err.status || 500).json({ error: 'Internal Server Error' });
 });
 
-const port = Number(env.PORT);
-server.listen(port, () => {
-  logger.info(`API server listening on port ${port}`);
-});
+const start = async () => {
+  if (env.NODE_ENV !== 'test') {
+    try {
+      await ensureBucket();
+    } catch (error) {
+      logger.error({ err: error }, 'Failed to ensure object storage bucket');
+      process.exit(1);
+    }
+  }
+
+  const port = Number(env.PORT);
+  server.listen(port, () => {
+    logger.info(`API server listening on port ${port}`);
+  });
+};
+
+start();
 
 process.on('SIGINT', async () => {
   await prisma.$disconnect();

@@ -15,6 +15,9 @@ const envSchema = z.object({
   MINIO_ACCESS_KEY: z.string().default('minioadmin'),
   MINIO_SECRET_KEY: z.string().default('minioadmin'),
   MINIO_BUCKET: z.string().default('notsphere'),
+  MINIO_REGION: z.string().default('us-east-1'),
+  MINIO_USE_SSL: z.string().default('false'),
+  PUBLIC_S3_URL: z.string().default('http://localhost:9000/notsphere'),
   CSRF_SECRET: z.string().default('csrf-secret')
 });
 

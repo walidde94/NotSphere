@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import sanitizeHtml from 'sanitize-html';
 import prisma from '../../lib/prisma';
 import { requireAuth } from '../../middleware/requireAuth';
+
+const scrubAttachment = <T extends { storageKey?: string }>(attachment: T) => {
+  const { storageKey: _storageKey, ...rest } = attachment;
+  return rest;
+};
 
 const router = Router();
 
@@ -32,13 +38,56 @@ router.post('/', async (req, res) => {
 
 router.get('/:groupId/notes', async (req, res) => {
   const paramsSchema = z.object({ groupId: z.string().cuid() });
-  const { groupId } = paramsSchema.parse(req.params);
-
-  const notes = await prisma.note.findMany({
-    where: { groupId, deletedAt: null },
-    orderBy: { updatedAt: 'desc' }
+  const querySchema = z.object({
+    query: z.string().optional(),
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(20)
   });
-  res.json({ notes });
+
+  const { groupId } = paramsSchema.parse(req.params);
+  const { query, page, limit } = querySchema.parse(req.query);
+
+  const group = await prisma.group.findFirst({ where: { id: groupId, userId: req.user!.id } });
+  if (!group) {
+    return res.status(404).json({ error: 'Group not found' });
+  }
+
+  const where = {
+    groupId,
+    deletedAt: null,
+    ...(query
+      ? {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { plainPreview: { contains: query, mode: 'insensitive' } }
+          ]
+        }
+      : {})
+  } as const;
+
+  const [notes, total] = await Promise.all([
+    prisma.note.findMany({
+      where,
+      include: { attachments: true },
+      orderBy: { updatedAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit
+    }),
+    prisma.note.count({ where })
+  ]);
+
+  res.json({
+    notes: notes.map((note) => ({
+      ...note,
+      attachments: note.attachments.map((attachment) => scrubAttachment(attachment))
+    })),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 });
 
 router.post('/:groupId/notes', async (req, res) => {
@@ -55,13 +104,21 @@ router.post('/:groupId/notes', async (req, res) => {
   const note = await prisma.note.create({
     data: {
       groupId,
-      title: body.title ?? 'Untitled note',
+      title: body.title ? sanitizeHtml(body.title, { allowedTags: [], allowedAttributes: {} }) : 'Untitled note',
       content: body.content ?? { type: 'doc', content: [] },
-      plainPreview: '',
+      plainPreview: body.title
+        ? sanitizeHtml(body.title, { allowedTags: [], allowedAttributes: {} })
+        : '',
       isPinned: false
+    },
+    include: { attachments: true }
+  });
+  res.status(201).json({
+    note: {
+      ...note,
+      attachments: note.attachments.map((attachment) => scrubAttachment(attachment))
     }
   });
-  res.status(201).json({ note });
 });
 
 router.patch('/:id', async (req, res) => {
